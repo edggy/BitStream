@@ -45,12 +45,15 @@ class BitStream:
     
     def __repr__(self):
         return ('{:#0%db}' % (self.length + 2)).format(self.stream)
+    
+    def __hash__(self):
+        return hash((self.length, self.stream))
         
     def __len__(self):
         return self.length
     
     def __int__(self):
-        return int(self.stream)
+        return sum(1<<(self.length-1-i) for i in range(self.length) if self.stream>>i&1)
     
     def __iter__(self):
         return BitIterator(self.stream, self.length)
@@ -131,6 +134,13 @@ class BitStream:
             pass
     
         try:
+            # Check to see if we have a lenght e.g. bits is a BitStream
+            if length is None:
+                try:
+                    length = len(bits)
+                except TypeError:
+                    pass
+            
             # Assume the input is a number
             bits = int(bits)
             
@@ -148,16 +158,19 @@ class BitStream:
                 # Otherwise push the bits onto the stream
                 for b in reversed(BitIterator(bits, length)):
                     self.pushBit(b)
-        except (TypeError, ValueError):    
+        except (TypeError, ValueError, AttributeError):    
             pass        
     
         try:
             streams = []
             for i in bits:
-                streams.append(BitStream(i, length))
+                streams.append(BitStream(i))
+            addedLen = 0
             for s in streams:
+                addedLen += len(s)
                 for b in s:
-                    self.pushBit(b)            
+                    self.pushBit(b)
+            self.length += length - addedLen
         except TypeError:
             pass        
             
@@ -221,3 +234,11 @@ if __name__ == '__main__':
     bits2.push(bits)  
     print bits
     print bits2
+    print
+    
+    bits4 = BitStream('a')
+    bits5 = BitStream()
+    bits5.push('a')
+    print bits4
+    print bits5
+    print bits4 + bits5
